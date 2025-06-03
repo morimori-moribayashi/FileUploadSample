@@ -1,14 +1,38 @@
 "use client"
 import Image from "next/image";
 import { useState } from "react";
+import { chunkUpload } from "@/utils/chunkUpload";
 
 export default function Home() {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [currentChunk, setCurrentChunk] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setError(null)
+    setUploading(true)
+    setProgress(0)
+
+    try {
+      console.log('Selected file:', file.name)
+      await chunkUpload(file, (progress: number) => {
+        console.log(`Upload progress: ${progress}%`)
+        setProgress(progress)
+      })
+      console.log('Upload completed')
+    } catch (err) {
+      console.error('Upload error:', err)
+      setError('アップロードに失敗しました')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
-    <div>
-         <div className="p-6">
+    <div className="p-6">
       <div className="mb-4">
         <input
           type="file"
@@ -20,20 +44,17 @@ export default function Home() {
       
       {uploading && (
         <div className="mb-4">
-          <div className="bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
           <p className="text-sm text-gray-600 mt-2">
-            アップロード中... {Math.round(progress)}% ({currentChunk} ブロック完了)
+            アップロード中... {progress}%
           </p>
         </div>
       )}
-    </div>
-  )
-}
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+          {error}
+        </div>
+      )}
     </div>
   );
 }
