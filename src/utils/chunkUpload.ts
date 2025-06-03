@@ -1,5 +1,6 @@
 "use client"
 
+import { commitUpload } from "@/services/azure-blob-service"
 import axios from "axios"
 
 export async function chunkUpload(file: File, onProgress: (progress: number) => void) {
@@ -18,7 +19,7 @@ export async function chunkUpload(file: File, onProgress: (progress: number) => 
       formData.append('index', i.toString())
       formData.append('containerName', containerName)
       formData.append('blobName', blobName)
-      
+      let blockIds = []
       try {
         // チャンクをアップロードするロジック
         const response = await axios.post('/api/upload', formData, {
@@ -26,13 +27,17 @@ export async function chunkUpload(file: File, onProgress: (progress: number) => 
             'Content-Type': 'multipart/form-data',
           },
         })
-        
+        if( response.status !== 200){
+          throw new Error("アップロードに失敗しました")
+        }
+        blockIds.push(response.data.blockId)
         // アップロードの進捗を通知
         onProgress((i + 1) / totalChunks * 100)
       } catch (error) {
         console.error(`チャンク ${i + 1} のアップロードに失敗:`, error)
         throw new Error(`チャンク ${i + 1} のアップロードに失敗しました`)
       }
+      await commitUpload(containerName, blobName, blockIds)
     }
   } catch (error) {
     console.error('ファイルアップロードエラー:', error)

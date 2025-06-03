@@ -44,3 +44,14 @@ export async function uploadBlobByChunk(containerName: string, blobName: string,
         }
     }
 }
+
+export async function commitUpload(containerName: string, blobName: string, blockIds: string[]){
+    try{
+        const containerClient = await createContainer(containerName)
+        const blockBlobClient = containerClient.getBlockBlobClient(blobName)
+        await blockBlobClient.commitBlockList(blockIds)
+    }catch(error){
+        console.error("Error committing upload:", error)
+        throw error
+    }
+}
